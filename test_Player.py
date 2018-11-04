@@ -757,6 +757,7 @@ def test_many_randomized_trials():
         test_MW_delay()
         test_SVSS()
         test_SVSS_correct_RB()
+        test_SVSS_evil_player()
 
 
 def test_mw_evil_player():
@@ -938,6 +939,7 @@ def test_SVSS():
         assert (2, dealer.id) in player.SVSS_val, "No secret reconstructed"
         assert player.SVSS_val[(2, dealer.id)] == secret, "Wrong secret reconstructed"
 
+
 def test_SVSS_correct_RB():
     n = 4
     t = 1
@@ -956,3 +958,136 @@ def test_SVSS_correct_RB():
     for player in players.values():
         assert (2, dealer.id) in player.SVSS_val, "No secret reconstructed"
         assert player.SVSS_val[(2, dealer.id)] == secret, "Wrong secret reconstructed"
+
+
+def test_SVSS_evil_player():
+    n = 4
+    t = 1
+    sim = RBRandomOrderSimulator(n, t)
+    players = {i: Player(sim, i, n, t) for i in range(1, n + 1)}
+    evil_player = EvilPlayer(sim, 4, 4, 1)
+    players[4] = evil_player
+    sim.players = players
+
+    dealer = players[randint(1, n)]
+    secret = randint(1, 40)
+    tag = (2, dealer.id)
+
+    dealer.deal_SVSS(secret)
+
+    while sim.remaining():
+        sim.step()
+
+    assert all(tag in player.SVSS_val for player in players.values()), "No secret reconstructed"
+
+    if all(player.SVSS_val[tag] is not None for player in players.values()):
+        assert all(player.SVSS_val[tag] == secret for player in players.values()), "No secret reconstructed"
+    else:
+        assert any(evil_player.id in player.D for player in players.values()), "Wrong secret, but didn't update D"
+
+
+def test_SVSS_sevreal_runs():
+    sim = RBRandomOrderSimulator(4, 1)
+    players = {i: Player(sim, i, 4, 1) for i in range(1, 4 + 1)}
+    sim.players = players
+    runs = 5
+
+    def helper(i):
+        dealer = players[randint(1, 4)]
+        secret = randint(1, 40)
+        dealer.deal_SVSS(secret)
+
+        tag = (dealer.c, dealer.id)
+        return dealer, secret, tag
+
+    dealer = []
+    secret = []
+    tag = []
+
+
+    for i in range(runs):
+        data = helper(i)
+
+        dealer.append(data[0])
+        secret.append(data[1])
+        tag.append(data[2])
+
+    while sim.remaining():
+        sim.step()
+
+    for i in range(runs):
+        assert all(tag[i] in player.SVSS_val for player in players.values()), "No secret reconstructed"
+        assert all(player.SVSS_val[tag[i]] == secret[i] for player in players.values()), "Wrong secret reconstructed"
+
+
+def test_delay_message():
+    player = Player(None, 1, 4, 1)
+
+    tag = (1, 1)
+    message = Message(None, (1, 1), 2, Stage.SVSS_VALUES)
+
+    early = 0
+    before = 5
+    early_mid = 13
+    late_mid = 17
+    after = 25
+    late = 30
+
+    times = [[before, early_mid], [early_mid, after], [early_mid, late_mid], [before, after], [early, before],
+             [after, late], [early, None], [early_mid, None], [after, None]]
+
+    values = [False] * 9
+
+    for i in range(len(times)):
+        player.invocations[tag] = times[i]
+        assert player.delay_message(message, tag) == values[i]
+
+    second_tag = (2, 2)
+    player.invocations[second_tag] = [10, None]
+
+    for i in range(len(times)):
+        player.invocations[tag] = times[i]
+        assert player.delay_message(message, tag) == values[i]
+
+    player.DEAL[second_tag] = {2: 1}
+
+    for i in range(len(times)):
+        player.invocations[tag] = times[i]
+        assert player.delay_message(message, tag) == values[i]
+
+    player.ACK[second_tag] = {(1,2): 1}
+    for i in range(len(times)):
+        player.invocations[tag] = times[i]
+        assert player.delay_message(message, tag) == values[i]
+
+    player.DEAL.pop(second_tag)
+    for i in range(len(times)):
+        player.invocations[tag] = times[i]
+        assert player.delay_message(message, tag) == values[i]
+    player.ACK.pop(second_tag)
+
+    player.invocations[second_tag] = [10, 20]
+
+    for i in range(len(times)):
+        player.invocations[tag] = times[i]
+        assert player.delay_message(message, tag) == values[i]
+
+    values[5] = True
+    values[8] = True
+
+    player.DEAL[second_tag] = {2: 1}
+
+    for i in range(len(times)):
+        player.invocations[tag] = times[i]
+        assert player.delay_message(message, tag) == values[i]
+
+    player.ACK[second_tag] = {(1,2): 1}
+    for i in range(len(times)):
+        player.invocations[tag] = times[i]
+        assert player.delay_message(message, tag) == values[i]
+
+    player.DEAL.pop(second_tag)
+    for i in range(len(times)):
+        player.invocations[tag] = times[i]
+        assert player.delay_message(message, tag) == values[i]
+    player.ACK.pop(second_tag)
