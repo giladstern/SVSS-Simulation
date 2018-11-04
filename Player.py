@@ -28,6 +28,7 @@ class Player:
         self.MW_OK = set()
         self.MW_share_done = set()
         self.MW_K = {}
+        self.MW_waiting_K = {}
         self.MW_val = {}
         self.MW_mod_value = {}
         self.MW_reconstruct_started = set()
@@ -247,6 +248,8 @@ class Player:
 
     def process_mw_ack_corr(self, tag, sender):
         mod = tag[3]
+        if tag not in self.DEAL:
+            self.DEAL[tag] = {}
         if tag in self.MW_data and sender in self.MW_corroborate[tag] and sender in self.MW_ack[tag]\
                 and len(self.DEAL[tag]) < self.n - self.t:
             self.DEAL[tag][sender] = self.MW_corroborate[tag].pop(sender)
@@ -292,8 +295,9 @@ class Player:
 
     def process_mw_ack_L(self, tag, sender):
         mod = tag[3]
-        if tag in self.MW_mod_data and sender in self.MW_mod_corroborate[tag] and sender in self.MW_ack[tag]\
-                and len(self.MW_mod_M[tag]) < self.n - self.t:
+        if tag in self.MW_mod_data and tag in self.MW_mod_corroborate and sender in self.MW_mod_corroborate[tag] and \
+                tag in self.MW_ack and sender in self.MW_ack[tag] and tag in self.MW_mod_M and \
+                len(self.MW_mod_M[tag]) < self.n - self.t:
 
             self.MW_mod_M[tag].add(sender)
             if len(self.MW_mod_M[tag]) == self.n - self.t:
@@ -355,8 +359,9 @@ class Player:
         self.MW_reconstruct_started.add(tag)
         messages = []
 
-        if tag in self.MW_K:
-            messages = self.MW_K[tag]
+        if tag in self.MW_waiting_K:
+            messages = self.MW_waiting_K[tag]
+            self.MW_waiting_K.pop(tag)
         self.MW_K[tag] = {l: [] for l in self.MW_M[tag]}
 
         for message in messages:
@@ -372,10 +377,10 @@ class Player:
         l, val = message.content
         tag = message.tag
 
-        if tag not in self.MW_share_done:
-            if tag not in self.MW_K:
-                self.MW_K[tag] = []
-            self.MW_K[tag].append(message)
+        if tag not in self.MW_K:
+            if tag not in self.MW_waiting_K:
+                self.MW_waiting_K[tag] = []
+            self.MW_waiting_K[tag].append(message)
             return
 
         if l not in self.MW_M[tag] or message.sender not in self.MW_L[tag][l]:

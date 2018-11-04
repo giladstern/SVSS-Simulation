@@ -34,7 +34,6 @@ class RandomOrderSimulator:
 
     def step(self):
         message, to = self.waiting.pop(randrange(len(self.waiting)))
-        tag = message.tag
 
         if to:
             self.players[to].DMM(message)
@@ -76,7 +75,8 @@ class RBRandomOrderSimulator(RandomOrderSimulator):
                 to_add.append(message)
         self.waiting_RB = [message for message in self.waiting_RB if message not in to_add]
         for message in to_add:
-            self.waiting.append((message, None))
+            for player in self.players:
+                self.waiting.append((message, player))
 
     def remaining(self):
         if super().remaining():
@@ -132,7 +132,6 @@ class MWEvilRandomOrderSimulator(MWRandomOrderSimulator):
     def release_delayed(self):
         if self.dropped:
             self.RB(self.dropped)
-
 
 
 class EvilPlayer(Player):
@@ -750,7 +749,7 @@ def test_leaving_in_deal():
 
 
 def test_many_randomized_trials():
-    for i in range(100):
+    for i in range(1000):
         test_MW_rec()
         test_random_order_MW_run()
         test_leaving_in_deal()
