@@ -1,4 +1,5 @@
 from random import randrange
+from Message import Message
 
 
 class RandomOrderSimulator:
@@ -41,9 +42,7 @@ class Simulator(RandomOrderSimulator):
     """
     This simulator simulates RB faithfully as well as having a random order.
     It doesn't actually have the full RB protocol, but checks if n-t senders are willing to participate.
-    If there are enough senders, each sender receives a copy of the message at some future time.
-    Technically, in order to truly simulate RB, n - t isn't enough.
-    We need n - t out of which enough processors listen to each other.
+    If there are enough senders that are willing to work with each other, each sender receives a copy eventually.
     """
     def __init__(self, n, t):
         super().__init__()
@@ -64,7 +63,13 @@ class Simulator(RandomOrderSimulator):
             counter = 0
             for player in self.players.values():
                 if not player.delay_message(message, message.tag):
-                    counter += 1
+                    player_message = Message(None, message.tag, player.id, None, None, True)
+                    player_counter = 0
+                    for second_player in self.players.values():
+                        if not second_player.delay_message(player_message, tag):
+                            player_counter += 1
+                    if player_counter >= self.n - self.t:
+                        counter += 1
             if counter >= self.n - self.t:
                 to_add.append(message)
         self.waiting_RB = [message for message in self.waiting_RB if message not in to_add]
