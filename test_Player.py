@@ -591,8 +591,6 @@ def test_MW_dealer_OK():
         assert False, "No OK sent"
 
 
-
-
 def test_MW_finish():
     sim = FakeSimulator()
     players = {i:Player(sim, i, 4, 1) for i in range(1, 4+1)}
@@ -749,7 +747,7 @@ def test_leaving_in_deal():
 
 
 def test_many_randomized_trials():
-    for i in range(1000):
+    for i in range(100):
         test_MW_rec()
         test_random_order_MW_run()
         test_leaving_in_deal()

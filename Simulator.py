@@ -2,6 +2,11 @@ from random import randrange
 
 
 class RandomOrderSimulator:
+    """
+    This simulator only simulates a random order.
+    It does not simulate RB's correctly, seeing as they can be sent with less than n-t participants,
+    as well as having all RB's received at the same time by all processors.
+    """
     def __init__(self):
         self.waiting = []
         self.players = {}
@@ -12,7 +17,7 @@ class RandomOrderSimulator:
         self.waiting.append((message, to))
 
     def RB(self, message):
-        self.waiting.append((message,None))
+        self.waiting.append((message, None))
 
     def step(self):
         message, to = self.waiting.pop(randrange(len(self.waiting)))
@@ -33,6 +38,13 @@ class RandomOrderSimulator:
 
 
 class Simulator(RandomOrderSimulator):
+    """
+    This simulator simulates RB faithfully as well as having a random order.
+    It doesn't actually have the full RB protocol, but checks if n-t senders are willing to participate.
+    If there are enough senders, each sender receives a copy of the message at some future time.
+    Technically, in order to truly simulate RB, n - t isn't enough.
+    We need n - t out of which enough processors listen to each other.
+    """
     def __init__(self, n, t):
         super().__init__()
         self.waiting_RB = []
