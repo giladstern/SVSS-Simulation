@@ -66,7 +66,7 @@ class Simulator(RandomOrderSimulator):
                     player_message = Message(None, message.tag, player.id, None, None, True)
                     player_counter = 0
                     for second_player in self.players.values():
-                        if not second_player.delay_message(player_message, tag):
+                        if not second_player.delay_message(player_message, message.tag):
                             player_counter += 1
                     if player_counter >= self.n - self.t:
                         counter += 1
