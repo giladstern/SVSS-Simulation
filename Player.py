@@ -8,36 +8,37 @@ class Player:
         self.simulator = simulator
         self.id = id
         self.c = 0
-        self.D = set()
-        self.ACK = {}  # {tag: {(dealer, processor): f_dealer(processor)}. The Ack set from the protocol.
+        self.D = set()  # {processor1, processor2, ...}. The D set from the protocol.
+        self.ACK = {}  # {tag: {(R, j): f_R(j)}. The ACK set from the protocol.
         self.DEAL = {}  # {tag: {sender: data}}. The DATA set from the protocol.
         self.waiting = []  # Messages waiting from DMM.
-        self.invocations = {}  # [(begin_time, end_time)]. If an invocation hasn't ended there will be None.
+        self.invocations = {}  # {tag: (begin_time, end_time)}. If an invocation hasn't ended there will be None.
         self.n = n
         self.players = range(1, n+1)
         self.t = t
         self.field = n ** 2
-        self.MW_data = {}  # {tag: (polynomial, {j: f_j(i)}}. The data received from the dealer.
+        self.MW_data = {}  # {tag: (polynomial, {j: f_j(i)})}. The data received from the dealer.
         self.MW_mod_data = {}  # {tag: polynomial}. The moderator's data received for the MW session.
-        self.MW_corroborate = {}  # {tag: {j: f_i(j)}. Data received which agrees with P_i's data.
+        self.MW_corroborate = {}  # {tag: {j: f_i(j)}}. Data received which agrees with P_i's data.
         # If messages are received before receiving the relevant data, the messages are stored instead of dictionaries.
-        self.MW_ack = {}  # {tag: {processors1, ...}}. Processors who've sent acks.
-        self.MW_L = {}  # {tag: {j : {processor1, ...}}. Each processor's L set.
+        self.MW_ack = {}  # {tag: {processor1, ...}}. Processors who've sent acks.
+        self.MW_L = {}  # {tag: {j : {processor1, ...}}}. Each processor's L set.
         self.MW_mod_M = {}  # {tag: {processor1, ...}}. The moderator's accumulating M sets.
-        self.MW_mod_corroborate = {}  # {tag: {processor1, ...}}. Processors who've agreed with the moderator.
+        self.MW_mod_corroborate = {}  # {tag: {processor1, ...}}.
+        # Processors who’ve sent all the relevant data whose point agrees with the moderator's polynomial.
         # MW_mod_corroborate is the intersection of MW_ack and MW_mod_corroborate.
         # If messages are received before receiving the relevant data, the messages are stored instead of processors.
         self.MW_M = {}  # {tag: {processor1, ...}}. The received M sets.
-        self.MW_secret_polys = {}  # {tag: (f, {j: f_j})}. The dealer's sampled polynomials.
+        self.MW_secret_polys = {}  # {tag: (f, {j: f_j})}. The dealer's randomly sampled polynomials.
         self.MW_OK = set()  # {tag1, tag2, ...}. Tags for which an OK message has been received.
         self.MW_share_done = set()  # {tag1, tag2, ...} . Tags for which the MW-Share protocol is done.
-        self.MW_K = {}  # {tag: {dealer_index: [(moderator_index, f_dealer(moderator)]}. The K sets for reconstructions.
+        self.MW_K = {}  # {tag: {dealer: [(moderator, f_dealer(moderator)]}}. The K sets for reconstructions.
         self.MW_waiting_K = {}  # {tag: [message1, message2, ...]. K messages waiting to be processed.
-        self.MW_val = {}  # {SVSS_tag: {dealer: val}}. Reconstructed values, indexed by the relevant SVSS tag.
+        self.MW_val = {}  # {SVSS_tag: {PolyTag: {dealer:{mod: val}}}}. Reconstructed values, indexed by SVSS tag.
         self.MW_mod_value = {}  # {tag: val}. The value used by the moderator for the relevant MW-SVSS invocation.
         # If a message is received before calling the moderate function there is a message instead of a value.
         self.MW_reconstruct_started = set()  # {tag1, tag2, ...}. Tags for which reconstruct has started.
-        self.G = {}  # {tag: {dealer: {moderator1, moderator2, ...}}. The G set from the protocol.
+        self.G = {}  # {tag: {dealer: {moderator1, moderator2, ...}}}. The G_j sets received from the dealer.
         self.S = {}  # {tag: {processor1, processor2, ...}}. The S_(t+1) set from the protocol.
         self.G_dealer = {}  # {tag: {dealer: {moderator1, moderator2, ...}}. The G set accumulated by the dealer.
         self.G_sent = set()  # {tag1, tag2, ...}. The SVSS invocations for which the G set has been sent.
@@ -122,13 +123,13 @@ class Player:
         if self.simulator:
             self.simulator.RB(message)
 
-    def deal_MW(self, secret, c, SVSS_d, moderator):
+    def deal_MW(self, secret, c, SVSS_d, moderator, poly_tag):
         """
         This function deals an MW secret.
-        Thie function shouldn't be called from outside, but after receiving values for an SVSS-Share.
+        The function shouldn't be called from outside, but after receiving values for an SVSS-Share.
         """
         time = self.simulator.time()
-        tag = (c, SVSS_d, self.id, moderator)
+        tag = (c, SVSS_d, self.id, moderator, poly_tag)
         self.invocations[tag] = [time, None]
 
         f = Polynomial.random_polynomial(secret, self.t, self.field)
@@ -180,12 +181,12 @@ class Player:
         elif message.stage == Stage.SVSS_G and message.tag[1] == message.sender and message.RB:
             self.receive_SVSS_G(message)
 
-    def MW_moderate(self, val, c, SVSS_d, MW_d):
+    def MW_moderate(self, val, c, SVSS_d, MW_d, poly_tag):
         """
         This function moderates an MW-Share protocol.
         The function shouldn't be called from outside, but after receiving values for an SVSS-Share
         """
-        tag = (c, SVSS_d, MW_d, self.id)
+        tag = (c, SVSS_d, MW_d, self.id, poly_tag)
 
         if tag in self.MW_mod_value:
             message = self.MW_mod_value[tag]
@@ -368,7 +369,7 @@ class Player:
         """
         This function is to be called only by an MW-SVSS dealer.
         This function should be called after receiving an M message, an ack message, or an L message.
-        This function checks if the share is done and if so it sends a message
+        This function checks if the share is done and if so it sends an OK message.
         """
 
         if tag in self.MW_M and tag in self.MW_L and tag in self.MW_ack and tag in self.ACK:
@@ -479,18 +480,19 @@ class Player:
         SVSS_tag = (tag[0], tag[1])
         dealer = tag[2]
         mod = tag[3]
+        poly_tag = tag[4]
 
         if SVSS_tag not in self.MW_val:
-            self.MW_val[SVSS_tag] = {}
+            self.MW_val[SVSS_tag] = {PolyTag.G: {}, PolyTag.H: {}}
 
-        if dealer not in self.MW_val[SVSS_tag]:
-            self.MW_val[SVSS_tag][dealer] = {}
+        if dealer not in self.MW_val[SVSS_tag][poly_tag]:
+            self.MW_val[SVSS_tag][poly_tag][dealer] = {}
 
         for l in self.MW_K[tag]:
             poly = Polynomial.interpolate(self.MW_K[tag][l])
             if poly.deg > self.t:
 
-                self.set_MW_value(None, SVSS_tag, dealer, mod)
+                self.set_MW_value(None, SVSS_tag, dealer, mod, poly_tag)
                 return
 
             points.append((l,poly.eval(0)))
@@ -500,27 +502,26 @@ class Player:
         poly = Polynomial.interpolate(points)
 
         if SVSS_tag not in self.MW_val:
-            self.MW_val[SVSS_tag] = {}
+            self.MW_val[SVSS_tag] = {PolyTag.G: {}, PolyTag.H: {}}
 
         if poly.deg > self.t:
-            self.set_MW_value(None, SVSS_tag, dealer, mod)
+            self.set_MW_value(None, SVSS_tag, dealer, mod, poly_tag)
         else:
-            self.set_MW_value(poly.eval(0), SVSS_tag, dealer, mod)
+            self.set_MW_value(poly.eval(0), SVSS_tag, dealer, mod, poly_tag)
 
-    def set_MW_value(self, val, pseudo_SVSS_tag, dealer, mod):
+    def set_MW_value(self, val, SVSS_tag, dealer, mod, poly_tag):
         """
         This function should be called in order to add a value to MW_val instead of setting it directly.
         The function also checks if the relevant SVSS-Reconstruct invocation has been completed.
         """
-        self.MW_val[pseudo_SVSS_tag][dealer][mod] = val
-        SVSS_tag = (pseudo_SVSS_tag[0] - pseudo_SVSS_tag[0] % 2, pseudo_SVSS_tag[1])
+        self.MW_val[SVSS_tag][poly_tag][dealer][mod] = val
         self.check_SVSS_rec_done(SVSS_tag)
 
     def deal_SVSS(self, secret):
         """
         This function deals a secret with the surrent processor as dealer.
         """
-        self.c += 2
+        self.c += 1
         poly = BivariatePolynomial.random_polynomial(secret, self.t, self.field)
         tag = (self.c, self.id)
         self.invocations[tag] = [self.simulator.time(), None]
@@ -538,18 +539,16 @@ class Player:
         The function calls all of MW-Share protocols as both dealer and moderator.
         """
 
-        # Refactored once in order to have the dealer and moderator of MW-SVSS in the tag.
-        # Realized we need different tags for the g and h values, instead I'm going to use a trick.
-        # The counter c is going to go up by 2 each time and then even c values are going to signify
-        # the g value, whereas odd c values are going to signify the h values.
+        # Refactored once in order to have the dealer and moderator of MW-SVSS in the tag,
+        # then a second time in order to include a tag for which value the dealer is sharing.
 
         g = message.content[0]
         h = message.content[1]
         for player in self.players:
-            self.deal_MW(g.eval(player), message.tag[0], message.tag[1], player)
-            self.deal_MW(h.eval(player), message.tag[0] + 1, message.tag[1], player)
-            self.MW_moderate(g.eval(player), message.tag[0] + 1, message.tag[1], player)
-            self.MW_moderate(h.eval(player), message.tag[0], message.tag[1], player)
+            self.deal_MW(g.eval(player), message.tag[0], message.tag[1], player, PolyTag.G)
+            self.deal_MW(h.eval(player), message.tag[0], message.tag[1], player, PolyTag.H)
+            self.MW_moderate(g.eval(player), message.tag[0], message.tag[1], player, PolyTag.H)
+            self.MW_moderate(h.eval(player), message.tag[0], message.tag[1], player, PolyTag.G)
 
     def check_SVSS_share_done(self, tag):
         """
@@ -562,15 +561,15 @@ class Player:
         if tag[1] == self.id:
             self.dealer_check_SVSS_share_done(tag)
 
-        SVSS_tag = (tag[0] - tag[0] % 2, tag[1])
+        SVSS_tag = (tag[0], tag[1])
         self.participant_check_SVSS_share_done(SVSS_tag)
 
     def dealer_check_SVSS_share_done(self, tag):
         """
-        This function is to be called by a dealer after having received any MW-Share invocation.
+        This function is to be called by a dealer after having completed any MW-Share invocation.
         After completing enough invocations, G and S sets are sent (as described in the protocol).
         """
-        SVSS_tag = (tag[0] - tag[0] % 2, tag[1])
+        SVSS_tag = (tag[0], tag[1])
         if SVSS_tag in self.G_sent:
             return
 
@@ -610,14 +609,16 @@ class Player:
         This is a helper function for adding two processors to each other's G_j sets.
         It checks if all relevant MW-Share invocations have been completed.
         """
-        c = tag[0] - tag[0] % 2
+        c = tag[0]
         d = tag[1]
         SVSS_d = tag[2]
         SVSS_m = tag[3]
         SVSS_tag = (c, d)
 
-        if (c, d, SVSS_d, SVSS_m) in self.MW_share_done and (c + 1, d, SVSS_d, SVSS_m) in self.MW_share_done \
-            and (c, d, SVSS_m, SVSS_d) in self.MW_share_done and (c + 1, d, SVSS_m, SVSS_d):
+        if (c, d, SVSS_d, SVSS_m, PolyTag.G) in self.MW_share_done and \
+                (c, d, SVSS_d, SVSS_m, PolyTag.H) in self.MW_share_done and \
+                (c, d, SVSS_m, SVSS_d, PolyTag.G) in self.MW_share_done and \
+                (c, d, SVSS_m, SVSS_d, PolyTag.H) in self.MW_share_done:
             self.G_dealer[SVSS_tag][SVSS_m].add(SVSS_d)
             self.G_dealer[SVSS_tag][SVSS_d].add(SVSS_m)
 
@@ -656,7 +657,6 @@ class Player:
         """
         This function is a helper function called after completing a relevant MW-Share or receiving G and S.
         """
-        tag = (tag[0] - tag[0] % 2, tag[1])
         if tag in self.SVSS_share_done:
             return
 
@@ -665,8 +665,10 @@ class Player:
 
         for i in self.G[tag]:
             for j in self.G[tag][i]:
-                if (c, d, i, j) not in self.MW_share_done or (c, d, j, i) not in self.MW_share_done or\
-                        (c + 1, d, i, j) not in self.MW_share_done or (c + 1, d, j, i) not in self.MW_share_done:
+                if (c, d, i, j, PolyTag.G) not in self.MW_share_done or \
+                        (c, d, j, i, PolyTag.G) not in self.MW_share_done or\
+                        (c, d, i, j, PolyTag.H) not in self.MW_share_done or \
+                        (c, d, j, i, PolyTag.H) not in self.MW_share_done:
                     return
 
         self.SVSS_share_done.add(tag)
@@ -682,10 +684,10 @@ class Player:
 
         for i in self.G[tag]:
             for j in self.G[tag][i]:
-                self.MW_reconstruct((c, d, i, j))
-                self.MW_reconstruct((c, d, j, i))
-                self.MW_reconstruct((c + 1, d, i, j))
-                self.MW_reconstruct((c + 1, d, j, i))
+                self.MW_reconstruct((c, d, i, j, PolyTag.G))
+                self.MW_reconstruct((c, d, j, i, PolyTag.G))
+                self.MW_reconstruct((c, d, i, j, PolyTag.H))
+                self.MW_reconstruct((c, d, j, i, PolyTag.H))
 
     def check_SVSS_rec_done(self, SVSS_tag):
         """
@@ -693,39 +695,36 @@ class Player:
         The function checks if all of the required MW-Reconstruct invocations have been completed.
         If all have been completed the function interpolates the required polynomials and completes the invocation.
         """
+
         if SVSS_tag in self.SVSS_val or SVSS_tag not in self.G:
             return
 
-        c = SVSS_tag[0]
-        d = SVSS_tag[1]
-
-        def helper(pseudo_SVSS_tag):
+        def helper(SVSS_tag, poly_tag):
             """
             This helper function returns True iff all MW-Reconstruct invocations have been completed for the dealers
             in S.
             Note that it checks only the c value in pseudo_SVSS_tag.
             That means that the function needs to be run once with c = 2k and with c = 2k + 1 for the same k.
             """
-            SVSS_tag = (pseudo_SVSS_tag[0] - pseudo_SVSS_tag[0] % 2, pseudo_SVSS_tag[1])
-            if pseudo_SVSS_tag not in self.MW_val or SVSS_tag not in self.G:
+            if SVSS_tag not in self.MW_val or SVSS_tag not in self.G:
                 return False
 
             for dealer in self.S[SVSS_tag]:
-                if dealer not in self.MW_val[pseudo_SVSS_tag]:
+                if dealer not in self.MW_val[SVSS_tag][poly_tag]:
                     return False
 
                 dealer_G = self.G[SVSS_tag][dealer]
-                dealer_vals = self.MW_val[pseudo_SVSS_tag][dealer]
+                dealer_vals = self.MW_val[SVSS_tag][poly_tag][dealer]
                 for mod in dealer_G:
-                    if mod not in self.MW_val[pseudo_SVSS_tag]:
+                    if mod not in self.MW_val[SVSS_tag][poly_tag]:
                         return False
-                    mod_vals = self.MW_val[pseudo_SVSS_tag][mod]
+                    mod_vals = self.MW_val[SVSS_tag][poly_tag][mod]
                     if mod not in dealer_vals or dealer not in mod_vals:
                         return False
 
             return True
 
-        if helper((c, d)) and helper((c + 1, d)):
+        if helper(SVSS_tag, PolyTag.G) and helper(SVSS_tag, PolyTag.H):
             self.interpolate_SVSS_val(SVSS_tag)
 
     def interpolate_SVSS_val(self, SVSS_tag):
@@ -736,9 +735,6 @@ class Player:
         """
         I = set()
 
-        c = SVSS_tag[0]
-        d = SVSS_tag[1]
-
         g_polys = {}
         h_polys = {}
 
@@ -746,8 +742,8 @@ class Player:
             g_points = []
             h_points = []
             for l in self.G[SVSS_tag][k]:
-                g_val = self.MW_val[(c, d)][k][l]
-                h_val = self.MW_val[(c + 1, d)][k][l]
+                g_val = self.MW_val[SVSS_tag][PolyTag.G][k][l]
+                h_val = self.MW_val[SVSS_tag][PolyTag.H][k][l]
                 if g_val is None or h_val is None:
                     I.add(k)
                     break

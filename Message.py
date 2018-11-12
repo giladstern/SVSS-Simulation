@@ -25,6 +25,11 @@ class Stage(Enum):
         return self.value >= other.value
 
 
+class PolyTag(Enum):
+    G = 0
+    H = 1
+
+
 class Message:
     def __init__(self, content, tag, sender, stage, moderator=None, RB=False):
         self.content = content

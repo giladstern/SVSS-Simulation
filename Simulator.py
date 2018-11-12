@@ -41,7 +41,9 @@ class RandomOrderSimulator:
 class Simulator(RandomOrderSimulator):
     """
     This simulator simulates RB faithfully as well as having a random order.
-    It doesn't actually have the full RB protocol, but checks if n-t senders are willing to participate.
+    It doesn't actually have the full RB protocol, but checks if n-t senders are willing to participate,
+    and if n-t are willing to participate with them.
+    In order to be a more faithful simulation, this needs to be done t+1 times.
     If there are enough senders that are willing to work with each other, each sender receives a copy eventually.
     """
     def __init__(self, n, t):

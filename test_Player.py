@@ -79,6 +79,7 @@ class EvilPlayer(Player):
             message.content = (message.content[0], message.content[1] + 1)
         super().RB(message)
 
+
 def test_polynomials():
     ### Univariate polynomial tests ###
     f = Polynomial([1, 2, 3])
@@ -144,8 +145,8 @@ def test_mw_deal():
     sim = FakeSimulator()
     p = Player(sim, 1, 4, 1)
 
-    p.deal_MW(1, 1, 1, 1)
-    p.MW_moderate(1, 1, 1, 1)
+    p.deal_MW(1, 1, 1, 1, PolyTag.G)
+    p.MW_moderate(1, 1, 1, 1, PolyTag.G)
     assert len(sim.messages) == 5, "Wrong number of messages"
 
 
@@ -153,8 +154,8 @@ def test_receive_mw_values():
     sim = FakeSimulator()
     p = Player(sim, 1, 4, 1)
 
-    p.deal_MW(1, 1, 1, 2)
-    tag = (1, 1, 1, 2)
+    p.deal_MW(1, 1, 1, 2, PolyTag.G)
+    tag = (1, 1, 1, 2, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES and to == p.id:
@@ -171,9 +172,9 @@ def test_receive_mw_values_mod():
     sim = FakeSimulator()
     p = Player(sim, 1, 4, 1)
 
-    p.deal_MW(1, 1, 1, 1)
-    p.MW_moderate(1, 1, 1, 1)
-    tag = (1, 1, 1, 1)
+    p.deal_MW(1, 1, 1, 1, PolyTag.G)
+    p.MW_moderate(1, 1, 1, 1, PolyTag.G)
+    tag = (1, 1, 1, 1, PolyTag.G)
 
     messages = sim.messages[:]
     for message, to in messages:
@@ -192,8 +193,8 @@ def test_receive_mw_corroborate():
     sim = FakeSimulator()
     p = Player(sim, 1, 4, 1)
 
-    p.deal_MW(1, 1, 1, 2)
-    tag = (1, 1, 1, 2)
+    p.deal_MW(1, 1, 1, 2, PolyTag.G)
+    tag = (1, 1, 1, 2, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES and to == p.id:
@@ -212,8 +213,8 @@ def test_receive_mw_ack():
     sim = FakeSimulator()
     p = Player(sim, 1, 4, 1)
 
-    p.deal_MW(1, 1, 2, 1)
-    tag = (1, 2, 1, 1)
+    p.deal_MW(1, 1, 2, 1, PolyTag.G)
+    tag = (1, 2, 1, 1, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES and to == p.id:
@@ -236,8 +237,8 @@ def test_weird_order_mw_corroborate():
     p = Player(sim, 1, 4, 1)
     q = Player(sim, 2, 4, 1)
 
-    p.deal_MW(1, 1, 1, 2)
-    tag = (1, 1, 1, 2)
+    p.deal_MW(1, 1, 1, 2, PolyTag.G)
+    tag = (1, 1, 1, 2, PolyTag.G)
 
     # p messages
     for message, to in sim.messages:
@@ -278,9 +279,9 @@ def test_MW_L():
     sim = FakeSimulator()
     players = {i:Player(sim, i, 4, 1) for i in range(1, 4+1)}
 
-    players[1].deal_MW(1, 1, 1, 1)
-    players[1].MW_moderate(1, 1, 1, 1)
-    tag = (1, 1, 1, 1)
+    players[1].deal_MW(1, 1, 1, 1, PolyTag.G)
+    players[1].MW_moderate(1, 1, 1, 1, PolyTag.G)
+    tag = (1, 1, 1, 1, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES:
@@ -329,9 +330,9 @@ def test_MW_L_weird():
     sim = FakeSimulator()
     players = {i:Player(sim, i, 4, 1) for i in range(1, 4+1)}
 
-    players[1].deal_MW(1, 1, 1, 1)
-    players[1].MW_moderate(1, 1, 1, 1)
-    tag = (1, 1, 1, 1)
+    players[1].deal_MW(1, 1, 1, 1, PolyTag.G)
+    players[1].MW_moderate(1, 1, 1, 1, PolyTag.G)
+    tag = (1, 1, 1, 1, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES:
@@ -385,9 +386,8 @@ def test_MW_dealer_OK():
     sim = FakeSimulator()
     players = {i:Player(sim, i, 4, 1) for i in range(1, 4+1)}
 
-    players[1].deal_MW(1, 1, 1, 1)
-    players[1].MW_moderate(1, 1, 1, 1)
-    tag = (1, 1, 1, 1)
+    players[1].deal_MW(1, 1, 1, 1, PolyTag.G)
+    players[1].MW_moderate(1, 1, 1, 1, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES:
@@ -429,11 +429,10 @@ def test_MW_dealer_weird_OK():
     sim = FakeSimulator()
     players = {i:Player(sim, i, 4, 1) for i in range(1, 4+1)}
 
-    players[1].deal_MW(1, 1, 1, 2)
-    tag = (1, 1, 1, 2)
+    players[1].deal_MW(1, 1, 1, 2, PolyTag.G)
 
     mod = players[2]
-    mod.MW_moderate(1, 1, 1, 1)
+    mod.MW_moderate(1, 1, 1, 1, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES:
@@ -483,13 +482,14 @@ def test_MW_dealer_weird_OK():
     else:
         assert False, "No OK sent"
 
+
 def test_MW_dealer_OK():
     sim = FakeSimulator()
     players = {i: Player(sim, i, 4, 1) for i in range(1, 4 + 1)}
 
-    players[1].deal_MW(1, 1, 1, 1)
-    players[1].MW_moderate(1, 1, 1, 1)
-    tag = (1, 1, 1, 1)
+    players[1].deal_MW(1, 1, 1, 1, PolyTag.G)
+    players[1].MW_moderate(1, 1, 1, 1, PolyTag.G)
+    tag = (1, 1, 1, 1, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES:
@@ -531,9 +531,9 @@ def test_MW_finish():
     sim = FakeSimulator()
     players = {i:Player(sim, i, 4, 1) for i in range(1, 4+1)}
 
-    players[1].deal_MW(1, 1, 1, 1)
-    players[1].MW_moderate(1, 1, 1, 1)
-    tag = (1, 1, 1, 1)
+    players[1].deal_MW(1, 1, 1, 1, PolyTag.G)
+    players[1].MW_moderate(1, 1, 1, 1, PolyTag.G)
+    tag = (1, 1, 1, 1, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES:
@@ -571,17 +571,18 @@ def test_MW_finish():
 
     assert tag in mod.MW_share_done, "Didn't finish"
 
+
 def test_MW_rec():
     sim = FakeSimulator()
     players = {i:Player(sim, i, 4, 1) for i in range(1, 4+1)}
 
     secret = randint(1, 40)
 
-    players[1].deal_MW(secret, 1, 1, 1)
-    tag = (1, 1, 1, 1)
+    players[1].deal_MW(secret, 1, 1, 1, PolyTag.G)
+    tag = (1, 1, 1, 1, PolyTag.G)
     SVSS_tag = (tag[0], tag[1])
     mod = players[1]
-    mod.MW_moderate(secret, 1, 1, 1)
+    mod.MW_moderate(secret, 1, 1, 1, PolyTag.G)
 
     for message, to in sim.messages:
         if message.stage == Stage.MW_VALUES:
@@ -624,7 +625,7 @@ def test_MW_rec():
                 players[i].DMM(RB)
 
     for i in players:
-        if players[i].MW_val[SVSS_tag][1][mod.id] != secret:
+        if players[i].MW_val[SVSS_tag][PolyTag.G][1][mod.id] != secret:
             assert False, "Wrong value"
 
 
@@ -636,19 +637,19 @@ def test_random_order_MW_run():
     dealer = players[randint(1, 4)]
     mod = randint(1, 4)
     secret = randint(1, 40)
-    tag = (1, 1, dealer.id, mod)
+    tag = (1, 1, dealer.id, mod, PolyTag.G)
     SVSS_tag = (tag[0], tag[1])
 
-    dealer.deal_MW(secret, 1, 1, mod)
-    players[mod].MW_moderate(secret, 1, 1, dealer.id)
+    dealer.deal_MW(secret, 1, 1, mod, PolyTag.G)
+    players[mod].MW_moderate(secret, 1, 1, dealer.id, PolyTag.G)
 
     while sim.remaining():
         sim.step()
 
     for player in players.values():
-        assert SVSS_tag in player.MW_val and dealer.id in player.MW_val[SVSS_tag] and \
-               mod in player.MW_val[SVSS_tag][dealer.id], "No value reconstructed"
-        assert player.MW_val[SVSS_tag][dealer.id][mod] == secret, "Wrong secret"
+        assert SVSS_tag in player.MW_val and dealer.id in player.MW_val[SVSS_tag][PolyTag.G] and \
+               mod in player.MW_val[SVSS_tag][PolyTag.G][dealer.id], "No value reconstructed"
+        assert player.MW_val[SVSS_tag][PolyTag.G][dealer.id][mod] == secret, "Wrong secret"
         assert not player.DEAL, "DEAL not empty"
         assert not player.ACK, "ACK not empty"
         assert not player.D, "D not empty"
@@ -662,19 +663,19 @@ def test_leaving_in_deal():
     dealer = players[randint(1, 4)]
     mod = randint(1, 4)
     secret = randint(1, 40)
-    tag = (1, 1, dealer.id, mod)
+    tag = (1, 1, dealer.id, mod, PolyTag.G)
     SVSS_tag = (tag[0], tag[1])
 
-    dealer.deal_MW(secret, 1, 1, mod)
-    players[mod].MW_moderate(secret, 1, 1, dealer.id)
+    dealer.deal_MW(secret, 1, 1, mod, PolyTag.G)
+    players[mod].MW_moderate(secret, 1, 1, dealer.id, PolyTag.G)
 
     while sim.remaining():
         sim.step()
 
     for player in players.values():
-        assert SVSS_tag in player.MW_val and dealer.id in player.MW_val[SVSS_tag] and \
-               mod in player.MW_val[SVSS_tag][dealer.id], "No value reconstructed"
-        assert player.MW_val[SVSS_tag][dealer.id][mod] == secret, "Wrong secret"
+        assert SVSS_tag in player.MW_val and dealer.id in player.MW_val[SVSS_tag][PolyTag.G] and \
+               mod in player.MW_val[SVSS_tag][PolyTag.G][dealer.id], "No value reconstructed"
+        assert player.MW_val[SVSS_tag][PolyTag.G][dealer.id][mod] == secret, "Wrong secret"
         assert not player.D, "D not empty"
         assert player.invocations[tag][1], "Didn't update timeline"
 
@@ -704,11 +705,11 @@ def test_mw_evil_player():
     dealer = players[randint(1, 4)]
     mod = randint(1, 4)
     secret = randint(1, 40)
-    tag = (1, 1, dealer.id, mod)
+    tag = (1, 1, dealer.id, mod, PolyTag.G)
     SVSS_tag = (tag[0], tag[1])
 
-    dealer.deal_MW(secret, 1, 1, mod)
-    players[mod].MW_moderate(secret, 1, 1, dealer.id)
+    dealer.deal_MW(secret, 1, 1, mod, PolyTag.G)
+    players[mod].MW_moderate(secret, 1, 1, dealer.id, PolyTag.G)
 
     while sim.remaining():
         sim.step()
@@ -717,9 +718,9 @@ def test_mw_evil_player():
 
     if not used_evil_player:
         for player in players.values():
-            assert SVSS_tag in player.MW_val and dealer.id in player.MW_val[SVSS_tag] and \
-                   mod in player.MW_val[SVSS_tag][dealer.id], "No value reconstructed"
-            assert player.MW_val[SVSS_tag][dealer.id][mod] == secret, "Wrong secret"
+            assert SVSS_tag in player.MW_val and dealer.id in player.MW_val[SVSS_tag][PolyTag.G] and \
+                   mod in player.MW_val[SVSS_tag][PolyTag.G][dealer.id], "No value reconstructed"
+            assert player.MW_val[SVSS_tag][PolyTag.G][dealer.id][mod] == secret, "Wrong secret"
             assert not player.DEAL, "DEAL not empty"
             assert not player.ACK, "ACK not empty"
             assert not player.D, "D not empty"
@@ -741,11 +742,11 @@ def test_MW_sevreal_runs():
         dealer = players[randint(1, 4)]
         mod = randint(1, 4)
         secret = randint(1, 40)
-        tag = (i, 1, dealer.id, mod)
+        tag = (i, 1, dealer.id, mod, PolyTag.G)
         SVSS_tag = (tag[0], tag[1])
 
-        dealer.deal_MW(secret, i, 1, mod)
-        players[mod].MW_moderate(secret, i, 1, dealer.id)
+        dealer.deal_MW(secret, i, 1, mod, PolyTag.G)
+        players[mod].MW_moderate(secret, i, 1, dealer.id, PolyTag.G)
         return dealer, mod, secret, tag, SVSS_tag
 
     dealer = []
@@ -754,7 +755,7 @@ def test_MW_sevreal_runs():
     tag = []
     SVSS_tag = []
 
-    for i in range(1,2 * runs+1, 2):
+    for i in range(1,runs + 1):
         data = helper(i)
 
         dealer.append(data[0])
@@ -768,9 +769,9 @@ def test_MW_sevreal_runs():
 
     for player in players.values():
         for i in range(runs):
-            assert SVSS_tag[i] in player.MW_val and dealer[i].id in player.MW_val[SVSS_tag[i]] and \
-                   mod[i] in player.MW_val[SVSS_tag[i]][dealer[i].id], "No value reconstructed"
-            assert player.MW_val[SVSS_tag[i]][dealer[i].id][mod[i]] == secret[i], "Wrong secret"
+            assert SVSS_tag[i] in player.MW_val and dealer[i].id in player.MW_val[SVSS_tag[i]][PolyTag.G] and \
+                   mod[i] in player.MW_val[SVSS_tag[i]][PolyTag.G][dealer[i].id], "No value reconstructed"
+            assert player.MW_val[SVSS_tag[i]][PolyTag.G][dealer[i].id][mod[i]] == secret[i], "Wrong secret"
             assert not player.DEAL, "DEAL not empty"
             assert not player.ACK, "ACK not empty"
             assert not player.D, "D not empty"
@@ -784,19 +785,19 @@ def test_MW_delay():
     dealer = players[randint(1, 4)]
     mod = randint(1, 4)
     secret = randint(1, 40)
-    tag = (1, 1, dealer.id, mod)
+    tag = (1, 1, dealer.id, mod, PolyTag.H)
     SVSS_tag = (tag[0], tag[1])
 
-    dealer.deal_MW(secret, 1, 1, mod)
-    players[mod].MW_moderate(secret, 1, 1, dealer.id)
+    dealer.deal_MW(secret, 1, 1, mod, PolyTag.H)
+    players[mod].MW_moderate(secret, 1, 1, dealer.id, PolyTag.H)
 
     while sim.remaining():
         sim.step()
 
     for player in players.values():
-        assert SVSS_tag in player.MW_val and dealer.id in player.MW_val[SVSS_tag] and \
-               mod in player.MW_val[SVSS_tag][dealer.id], "No value reconstructed"
-        assert player.MW_val[SVSS_tag][dealer.id][mod] == secret, "Wrong secret"
+        assert SVSS_tag in player.MW_val and dealer.id in player.MW_val[SVSS_tag][PolyTag.H] and \
+               mod in player.MW_val[SVSS_tag][PolyTag.H][dealer.id], "No value reconstructed"
+        assert player.MW_val[SVSS_tag][PolyTag.H][dealer.id][mod] == secret, "Wrong secret"
         assert not player.D, "D not empty"
         assert player.invocations[tag][1], "Didn't update timeline"
 
@@ -806,11 +807,9 @@ def test_MW_delay():
     dealer = players[randint(1, 4)]
     mod = randint(1, 4)
     secret = randint(1, 40)
-    tag = (2, dealer.id, mod)
-    SVSS_tag = (tag[0], tag[1])
 
-    dealer.deal_MW(secret, 2, 1, mod)
-    players[mod].MW_moderate(secret, 2, 1, dealer.id)
+    dealer.deal_MW(secret, 2, 1, mod, PolyTag.G)
+    players[mod].MW_moderate(secret, 2, 1, dealer.id, PolyTag.G)
 
     while sim.remaining():
         sim.step()
@@ -837,11 +836,11 @@ def test_different_values():
     dealer = players[randint(1, 4)]
     mod = randint(1, 4)
     secret = randint(1, 40)
-    tag = (1, 1, dealer.id, mod)
+    tag = (1, 1, dealer.id, mod, PolyTag.H)
     SVSS_tag = (tag[0], tag[1])
 
-    dealer.deal_MW(secret, 1, 1, mod)
-    players[mod].MW_moderate(secret + 1, 1, 1, dealer.id)
+    dealer.deal_MW(secret, 1, 1, mod, PolyTag.H)
+    players[mod].MW_moderate(secret + 1, 1, 1, dealer.id, PolyTag.H)
 
     while sim.remaining():
         sim.step()
@@ -870,8 +869,8 @@ def test_SVSS():
     #         player.check_SVSS_rec_done((2, dealer.id))
 
     for player in players.values():
-        assert (2, dealer.id) in player.SVSS_val, "No secret reconstructed"
-        assert player.SVSS_val[(2, dealer.id)] == secret, "Wrong secret reconstructed"
+        assert (1, dealer.id) in player.SVSS_val, "No secret reconstructed"
+        assert player.SVSS_val[(1, dealer.id)] == secret, "Wrong secret reconstructed"
 
 
 def test_SVSS_correct_RB():
@@ -890,8 +889,8 @@ def test_SVSS_correct_RB():
         sim.step()
 
     for player in players.values():
-        assert (2, dealer.id) in player.SVSS_val, "No secret reconstructed"
-        assert player.SVSS_val[(2, dealer.id)] == secret, "Wrong secret reconstructed"
+        assert (1, dealer.id) in player.SVSS_val, "No secret reconstructed"
+        assert player.SVSS_val[(1, dealer.id)] == secret, "Wrong secret reconstructed"
 
 
 def test_SVSS_evil_player():
@@ -905,7 +904,7 @@ def test_SVSS_evil_player():
 
     dealer = players[randint(1, n)]
     secret = randint(1, 40)
-    tag = (2, dealer.id)
+    tag = (1, dealer.id)
 
     dealer.deal_SVSS(secret)
 
